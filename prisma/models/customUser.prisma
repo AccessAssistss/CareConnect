@@ -15,6 +15,9 @@ model CustomUser {
     company  Company?
     provider Provider?
     staff    Staff?
+
+    companyService CompanyService[]
+    providerService ProviderService[]
 }
 
 // ####################--------------------Country, State and District Model--------------------####################

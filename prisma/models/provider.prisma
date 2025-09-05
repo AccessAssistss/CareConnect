@@ -24,3 +24,18 @@ model Provider {
     country Country?    @relation(fields: [countryId], references: [id])
     state   State?      @relation(fields: [stateId], references: [id])
 }
+
+// ##########----------Provider Service Model----------##########
+model ProviderService {
+    id          String   @id @default(uuid())
+    providerId  String
+    serviceId   String
+    pricePerDay Float
+    isActive    Boolean  @default(true)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    isDeleted   Boolean  @default(false)
+
+    provider CustomUser @relation(fields: [providerId], references: [id])
+    service  Service    @relation(fields: [serviceId], references: [id])
+}

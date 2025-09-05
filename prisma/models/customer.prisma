@@ -23,4 +23,32 @@ model Customer {
     user    CustomUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
     country Country?    @relation(fields: [countryId], references: [id])
     state   State?      @relation(fields: [stateId], references: [id])
+
+    wallet Wallet?
+    familyMember FamilyMember[]
 }
+
+// ##########----------Customer Wallet----------##########
+model Wallet {
+  id          String   @id @default(uuid())
+  customerId  String   @unique
+  balance     Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+}
+
+// ##########----------Wallet Transaction----------##########
+model WalletTransaction {
+  id          String   @id @default(uuid())
+  walletId    String
+  type        TransactionType
+  amount      Float
+  description String?
+  createdAt   DateTime @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+}
+

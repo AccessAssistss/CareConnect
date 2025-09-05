@@ -12,3 +12,9 @@ enum Gender {
     Male
     Female
 }
+
+// ##########----------Transaction Enums----------##########
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
