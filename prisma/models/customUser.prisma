@@ -1,0 +1,47 @@
+// ####################--------------------Custom User Model--------------------####################
+model CustomUser {
+    id           String   @id @default(uuid())
+    email        String?  @unique
+    name         String?
+    mobile       String   @db.VarChar(10)
+    userType     UserType
+    accessToken  String?
+    refreshToken String?
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+    isDeleted    Boolean  @default(false)
+
+    customer Customer?
+    company  Company?
+    provider Provider?
+    staff    Staff?
+}
+
+// ####################--------------------Country, State and District Model--------------------####################
+// ####################--------------------Country Model--------------------####################
+model Country {
+    id          String   @id @default(uuid())
+    countryName String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    isDeleted   Boolean  @default(false)
+
+    state    State[]
+    Customer Customer[]
+}
+
+// ####################--------------------State Model--------------------####################
+model State {
+    id        String   @id @default(uuid())
+    countryId String?
+    stateName String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    isDeleted Boolean  @default(false)
+
+    country Country? @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+    Customer Customer[]
+}
+
+// ####################--------------------Country and State Model End's here--------------------####################

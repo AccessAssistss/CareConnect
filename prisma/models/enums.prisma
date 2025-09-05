@@ -1,0 +1,14 @@
+// ##########----------Custom User Enums----------##########
+enum UserType {
+    Admin
+    Customer
+    Provider
+    Staff
+    Company
+}
+
+// ##########----------Employee Enums----------##########
+enum Gender {
+    Male
+    Female
+}
