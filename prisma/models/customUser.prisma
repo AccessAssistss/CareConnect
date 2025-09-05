@@ -27,7 +27,10 @@ model Country {
     isDeleted   Boolean  @default(false)
 
     state    State[]
-    Customer Customer[]
+    customer Customer[]
+    company  Company[]
+    provider Provider[]
+    staff    Staff[]
 }
 
 // ####################--------------------State Model--------------------####################
@@ -41,7 +44,10 @@ model State {
 
     country Country? @relation(fields: [countryId], references: [id], onDelete: Cascade)
 
-    Customer Customer[]
+    customer Customer[]
+    company  Company[]
+    provider Provider[]
+    staff    Staff[]
 }
 
 // ####################--------------------Country and State Model End's here--------------------####################
