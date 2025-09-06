@@ -13,7 +13,7 @@ model Staff {
     countryId      String?
     stateId        String?
     pincode        String?   @db.VarChar(100)
-    otpExpiration  DateTime?  @default(now())
+    otpExpiration  DateTime? @default(now())
     otp            String?   @db.VarChar(100)
     createdAt      DateTime  @default(now())
     updatedAt      DateTime  @updatedAt
@@ -24,5 +24,36 @@ model Staff {
     country Country?    @relation(fields: [countryId], references: [id])
     state   State?      @relation(fields: [stateId], references: [id])
 
-    booking Booking[]
+    booking       Booking[]
+    staffDocument StaffDocument?
+    staffSkill    StaffSkill[]
+}
+
+// ##########----------Staff Skills----------##########
+model StaffSkill {
+    id        String   @id @default(uuid())
+    staffId   String
+    skillId   String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    isDeleted Boolean  @default(false)
+
+    staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+    skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+}
+
+// ##########----------Staff Document Model----------##########
+model StaffDocument {
+    id                    String   @id @default(uuid())
+    staffId               String   @unique
+    name                  String   @db.VarChar(150)
+    govtID                String   @db.VarChar(300)
+    certification         String   @db.VarChar(300)
+    govtIDVerified        Boolean  @default(false)
+    certificationVerified Boolean  @default(false)
+    createdAt             DateTime @default(now())
+    updatedAt             DateTime @updatedAt
+    isDeleted             Boolean  @default(false)
+
+    staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
 }

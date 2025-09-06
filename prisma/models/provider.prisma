@@ -31,7 +31,7 @@ model Provider {
     providerSkill    ProviderSkill[]
 }
 
-// ##########----------ProviderSkill (Join Table)----------##########
+// ##########----------Provider Skills----------##########
 model ProviderSkill {
     id         String   @id @default(uuid())
     providerId String
