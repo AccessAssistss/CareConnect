@@ -1,0 +1,30 @@
+// ##########----------Wallet Model----------##########
+model Wallet {
+    id        String   @id @default(uuid())
+    balance   Float    @default(0)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    isDeleted Boolean  @default(false)
+
+    customerId String? @unique
+    providerId String? @unique
+    companyId  String? @unique
+
+    customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+    provider Provider? @relation(fields: [providerId], references: [id], onDelete: Cascade)
+    company  Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+    transactions WalletTransaction[]
+}
+
+// ##########----------Wallet Transaction Model----------##########
+model WalletTransaction {
+    id          String          @id @default(uuid())
+    walletId    String
+    type        TransactionType
+    amount      Float
+    description String?
+    createdAt   DateTime        @default(now())
+
+    wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+}

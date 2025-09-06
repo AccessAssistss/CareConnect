@@ -1,0 +1,16 @@
+// ##########----------Review Model----------##########
+model Review {
+  id         String   @id @default(uuid())
+  customerId String
+  providerId String?
+  companyId  String?
+  rating     Int
+  comment    String?  @db.VarChar(500)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  isDeleted  Boolean  @default(false)
+
+  customer Customer @relation(fields: [customerId], references: [id])
+  provider Provider? @relation(fields: [providerId], references: [id])
+  company  Company?  @relation(fields: [companyId], references: [id])
+}

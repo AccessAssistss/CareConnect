@@ -18,3 +18,12 @@ enum TransactionType {
   CREDIT
   DEBIT
 }
+
+// ##########----------Booking Enums----------##########
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  ASSIGNED
+  COMPLETED
+}

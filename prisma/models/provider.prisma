@@ -13,8 +13,9 @@ model Provider {
     countryId      String?
     stateId        String?
     pincode        String?   @db.VarChar(100)
-    otpExpiration  DateTime  @default(now())
+    otpExpiration  DateTime? @default(now())
     otp            String?   @db.VarChar(100)
+    isOnline       Boolean   @default(false)
     createdAt      DateTime  @default(now())
     updatedAt      DateTime  @updatedAt
     isDeleted      Boolean   @default(false)
@@ -23,6 +24,40 @@ model Provider {
     user    CustomUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
     country Country?    @relation(fields: [countryId], references: [id])
     state   State?      @relation(fields: [stateId], references: [id])
+
+    review           Review[]
+    wallet           Wallet?
+    providerDocument ProviderDocument?
+    providerSkill    ProviderSkill[]
+}
+
+// ##########----------ProviderSkill (Join Table)----------##########
+model ProviderSkill {
+    id         String   @id @default(uuid())
+    providerId String
+    skillId    String
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
+    isDeleted  Boolean  @default(false)
+
+    provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+    skill    Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+}
+
+// ##########----------Provider Document Model----------##########
+model ProviderDocument {
+    id                    String   @id @default(uuid())
+    providerId            String   @unique
+    name                  String   @db.VarChar(150)
+    govtID                String   @db.VarChar(300)
+    certification         String   @db.VarChar(300)
+    govtIDVerified        Boolean  @default(false)
+    certificationVerified Boolean  @default(false)
+    createdAt             DateTime @default(now())
+    updatedAt             DateTime @updatedAt
+    isDeleted             Boolean  @default(false)
+
+    provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 }
 
 // ##########----------Provider Service Model----------##########

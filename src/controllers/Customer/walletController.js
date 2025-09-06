@@ -3,18 +3,51 @@ const { asyncHandler } = require("../../../utils/asyncHandler");
 
 const prisma = new PrismaClient();
 
+// ##########----------Helper to get Wallet Owner----------##########
+const getWalletOwner = async (userId) => {
+    const user = await prisma.customUser.findFirst({ where: { id: userId } });
+    if (!user) return { type: null, owner: null };
+
+    let owner = null;
+    if (user.userType === "Customer") {
+        owner = await prisma.customer.findFirst({ where: { userId, isDeleted: false } });
+        return { type: "Customer", owner };
+    }
+    if (user.userType === "Provider") {
+        owner = await prisma.provider.findFirst({ where: { userId, isDeleted: false } });
+        return { type: "Provider", owner };
+    }
+    if (user.userType === "Company") {
+        owner = await prisma.company.findFirst({ where: { userId, isDeleted: false } });
+        return { type: "Company", owner };
+    }
+
+    return { type: null, owner: null };
+};
+
 // ##########----------Get Wallet Balance----------##########
 const getWallet = asyncHandler(async (req, res) => {
     const userId = req.user;
 
-    const customer = await prisma.customer.findFirst({ where: { userId } });
-    if (!customer) return res.respond(404, "Customer not found!");
+    const { type, owner } = await getWalletOwner(userId);
+    if (!owner) return res.respond(404, `${type || "User"} not found!`);
 
-    let wallet = await prisma.wallet.findUnique({ where: { customerId: customer.id } });
+    let wallet = await prisma.wallet.findFirst({
+        where: {
+            ...(type === "Customer" && { customerId: owner.id }),
+            ...(type === "Provider" && { providerId: owner.id }),
+            ...(type === "Company" && { companyId: owner.id }),
+        },
+    });
 
     if (!wallet) {
         wallet = await prisma.wallet.create({
-            data: { customerId: customer.id, balance: 0 },
+            data: {
+                balance: 0,
+                ...(type === "Customer" && { customerId: owner.id }),
+                ...(type === "Provider" && { providerId: owner.id }),
+                ...(type === "Company" && { companyId: owner.id }),
+            },
         });
     }
 
@@ -28,14 +61,25 @@ const addMoney = asyncHandler(async (req, res) => {
 
     if (!amount || amount <= 0) return res.respond(400, "Invalid amount!");
 
-    const customer = await prisma.customer.findFirst({ where: { userId } });
-    if (!customer) return res.respond(404, "Customer not found!");
+    const { type, owner } = await getWalletOwner(userId);
+    if (!owner) return res.respond(404, `${type || "User"} not found!`);
 
-    let wallet = await prisma.wallet.findUnique({ where: { customerId: customer.id } });
+    let wallet = await prisma.wallet.findFirst({
+        where: {
+            ...(type === "Customer" && { customerId: owner.id }),
+            ...(type === "Provider" && { providerId: owner.id }),
+            ...(type === "Company" && { companyId: owner.id }),
+        },
+    });
 
     if (!wallet) {
         wallet = await prisma.wallet.create({
-            data: { customerId: customer.id, balance: 0 },
+            data: {
+                balance: 0,
+                ...(type === "Customer" && { customerId: owner.id }),
+                ...(type === "Provider" && { providerId: owner.id }),
+                ...(type === "Company" && { companyId: owner.id }),
+            },
         });
     }
 
@@ -63,12 +107,18 @@ const deductMoney = asyncHandler(async (req, res) => {
 
     if (!amount || amount <= 0) return res.respond(400, "Invalid amount!");
 
-    const customer = await prisma.customer.findFirst({ where: { userId } });
-    if (!customer) return res.respond(404, "Customer not found!");
+    const { type, owner } = await getWalletOwner(userId);
+    if (!owner) return res.respond(404, `${type || "User"} not found!`);
 
-    const wallet = await prisma.wallet.findUnique({ where: { customerId: customer.id } });
+    const wallet = await prisma.wallet.findFirst({
+        where: {
+            ...(type === "Customer" && { customerId: owner.id }),
+            ...(type === "Provider" && { providerId: owner.id }),
+            ...(type === "Company" && { companyId: owner.id }),
+        },
+    });
+
     if (!wallet) return res.respond(404, "Wallet not found!");
-
     if (wallet.balance < amount) return res.respond(400, "Insufficient balance!");
 
     const updated = await prisma.wallet.update({
@@ -92,10 +142,17 @@ const deductMoney = asyncHandler(async (req, res) => {
 const getTransactions = asyncHandler(async (req, res) => {
     const userId = req.user;
 
-    const customer = await prisma.customer.findFirst({ where: { userId } });
-    if (!customer) return res.respond(404, "Customer not found!");
+    const { type, owner } = await getWalletOwner(userId);
+    if (!owner) return res.respond(404, `${type || "User"} not found!`);
 
-    const wallet = await prisma.wallet.findUnique({ where: { customerId: customer.id } });
+    const wallet = await prisma.wallet.findFirst({
+        where: {
+            ...(type === "Customer" && { customerId: owner.id }),
+            ...(type === "Provider" && { providerId: owner.id }),
+            ...(type === "Company" && { companyId: owner.id }),
+        },
+    });
+
     if (!wallet) return res.respond(404, "Wallet not found!");
 
     const transactions = await prisma.walletTransaction.findMany({

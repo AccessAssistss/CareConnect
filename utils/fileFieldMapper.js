@@ -1,11 +1,8 @@
-const EMPLOYER_FILE_FIELDS = {
-  signedMasterAgreement: "master_agreement",
-  kycDocuments: "kyc_documents",
-  boardResolution: "board_resolution",
-  onboardingSOP: "onboarding_sop",
-  additionalDoc: "additional_doc",
+const PROVIDER_FILE_FIELDS = {
+  govtID: "govt_id",
+  certification: "certification",
 };
 
 module.exports = {
-  EMPLOYER_FILE_FIELDS,
+  PROVIDER_FILE_FIELDS,
 };

@@ -13,7 +13,7 @@ model Customer {
     countryId      String?
     stateId        String?
     pincode        String?   @db.VarChar(100)
-    otpExpiration  DateTime  @default(now())
+    otpExpiration  DateTime?  @default(now())
     otp            String?   @db.VarChar(100)
     createdAt      DateTime  @default(now())
     updatedAt      DateTime  @updatedAt
@@ -26,29 +26,5 @@ model Customer {
 
     wallet Wallet?
     familyMember FamilyMember[]
+    review Review[]
 }
-
-// ##########----------Customer Wallet----------##########
-model Wallet {
-  id          String   @id @default(uuid())
-  customerId  String   @unique
-  balance     Float    @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  transactions WalletTransaction[]
-}
-
-// ##########----------Wallet Transaction----------##########
-model WalletTransaction {
-  id          String   @id @default(uuid())
-  walletId    String
-  type        TransactionType
-  amount      Float
-  description String?
-  createdAt   DateTime @default(now())
-
-  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
-}
-

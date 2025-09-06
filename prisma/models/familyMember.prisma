@@ -7,6 +7,7 @@ model FamilyMember {
     age          String?  @db.VarChar(5)
     relation     String?  @db.VarChar(50)
     profilePhoto String?  @db.VarChar(300)
+    note         String?  @db.VarChar(500)
     createdAt    DateTime @default(now())
     updatedAt    DateTime @updatedAt
     isDeleted    Boolean  @default(false)

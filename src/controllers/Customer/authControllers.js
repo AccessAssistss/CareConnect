@@ -139,6 +139,7 @@ const verifyOTP = asyncHandler(async (req, res) => {
             id: user.id,
             mobile: user.mobile,
             userType: user.userType,
+            isRegistered: profile.isExistingUser,
         },
         tokens: { accessToken, refreshToken },
     });
@@ -147,10 +148,10 @@ const verifyOTP = asyncHandler(async (req, res) => {
 // ##########----------Complete Customer Profile----------##########
 const completeCustomerProfile = asyncHandler(async (req, res) => {
     const userId = req.user;
-    const { name, email, gender, dob, address, countryId, stateId, pincode } = req.body;
+    const { name, mobile, email, gender, dob, address, countryId, stateId, pincode } = req.body;
 
     let user = await prisma.customUser.findFirst({
-        where: { mobile, userType },
+        where: { id: userId },
     });
     if (!user) {
         return res.respond(404, "Customer not found!")
@@ -167,14 +168,40 @@ const completeCustomerProfile = asyncHandler(async (req, res) => {
             countryId,
             stateId,
             pincode,
+            isExistingUser: true
         },
     });
 
     res.respond(200, "Customer profile updated successfully", customer);
 });
 
+// ##########----------Get Customer Profile----------##########
+const getCustomerProfile = asyncHandler(async (req, res) => {
+    const userId = req.user;
+
+    const customer = await prisma.customer.findFirst({
+        where: { userId, isDeleted: false },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            gender: true,
+            dob: true,
+            address: true,
+            pincode: true,
+        },
+    });
+
+    if (!customer) {
+        return res.respond(404, "Customer profile not found");
+    }
+
+    res.respond(200, "Customer profile fetched successfully", customer);
+});
+
 module.exports = {
     sendLoginOTP,
     verifyOTP,
-    completeCustomerProfile
+    completeCustomerProfile,
+    getCustomerProfile
 }

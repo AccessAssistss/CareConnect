@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 // ##########----------Create Family Member----------##########
 const createFamilyMember = asyncHandler(async (req, res) => {
     const customerId = req.user;
-    const { name, gender, age, relation } = req.body;
+    const { name, gender, age, relation, note } = req.body;
 
     const customer = await prisma.customer.findFirst({
         where: { userId: customerId },
@@ -22,6 +22,7 @@ const createFamilyMember = asyncHandler(async (req, res) => {
             gender,
             age,
             relation,
+            note
         },
     });
 
@@ -73,7 +74,7 @@ const getFamilyMemberById = asyncHandler(async (req, res) => {
 const updateFamilyMember = asyncHandler(async (req, res) => {
     const customerId = req.user;
     const { id } = req.params;
-    const { name, gender, age, relation } = req.body;
+    const { name, gender, age, relation, note } = req.body;
 
     const customer = await prisma.customer.findFirst({
         where: { userId: customerId },
@@ -91,7 +92,7 @@ const updateFamilyMember = asyncHandler(async (req, res) => {
 
     const updated = await prisma.familyMember.update({
         where: { id },
-        data: { name, gender, age, relation },
+        data: { name, gender, age, relation, note },
     });
 
     res.respond(200, "Family member updated successfully!", updated);

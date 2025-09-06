@@ -1,0 +1,33 @@
+// ##########----------Booking Request Model----------##########
+model BookingRequest {
+    id             String        @id @default(uuid())
+    customerId     String
+    familyMemberId String?
+    providerSvcId  String?
+    companySvcId   String?
+    startDate      DateTime
+    endDate        DateTime?
+    totalAmount    Float
+    status         BookingStatus @default(PENDING)
+    createdAt      DateTime      @default(now())
+    updatedAt      DateTime      @updatedAt
+    isDeleted      Boolean       @default(false)
+
+    bookings Booking[]
+}
+
+// ##########----------Booking Model----------##########
+model Booking {
+    id        String        @id @default(uuid())
+    requestId String
+    date      DateTime
+    staffId   String?
+    status    BookingStatus @default(PENDING)
+    amount    Float
+    createdAt DateTime      @default(now())
+    updatedAt DateTime      @updatedAt
+    isDeleted Boolean       @default(false)
+
+    request BookingRequest @relation(fields: [requestId], references: [id])
+    staff   Staff?         @relation(fields: [staffId], references: [id], onDelete: Cascade)
+}

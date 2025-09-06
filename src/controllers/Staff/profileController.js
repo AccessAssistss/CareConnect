@@ -9,7 +9,7 @@ const completeStaffProfile = asyncHandler(async (req, res) => {
     const { name, email, gender, dob, address, countryId, stateId, pincode } = req.body;
 
     let user = await prisma.customUser.findFirst({
-        where: { mobile, userType },
+        where: { id: userId },
     });
     if (!user) {
         return res.respond(404, "Staff not found!")
@@ -26,6 +26,7 @@ const completeStaffProfile = asyncHandler(async (req, res) => {
             countryId,
             stateId,
             pincode,
+            isExistingUser: true
         },
     });
 

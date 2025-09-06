@@ -1,5 +1,5 @@
 const { PrismaClient } = require("@prisma/client");
-const { asyncHandler } = require("../../utils/asyncHandler");
+const { asyncHandler } = require("../../../utils/asyncHandler");
 
 const prisma = new PrismaClient();
 
