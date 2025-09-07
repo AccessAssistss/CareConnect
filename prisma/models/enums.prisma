@@ -20,10 +20,19 @@ enum TransactionType {
 }
 
 // ##########----------Booking Enums----------##########
+enum BookingRequestStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  CANCELLED
+  COMPLETED
+}
+
 enum BookingStatus {
   PENDING
-  ACCEPTED
+  CONFIRMED
   DECLINED
   ASSIGNED
+  CANCELLED
   COMPLETED
 }

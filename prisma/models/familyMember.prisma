@@ -13,4 +13,6 @@ model FamilyMember {
     isDeleted    Boolean  @default(false)
 
     customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+    bookingRequest BookingRequest[]
 }

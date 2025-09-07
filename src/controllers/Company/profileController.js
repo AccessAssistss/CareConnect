@@ -64,12 +64,36 @@ const getCompanyProfile = asyncHandler(async (req, res) => {
         where: { userId, isDeleted: false },
         select: {
             id: true,
-            name: true,
+            companyName: true,
             email: true,
-            gender: true,
-            dob: true,
             address: true,
             pincode: true,
+            createdAt: true,
+            updatedAt: true,
+        },
+    });
+
+    if (!company) {
+        return res.respond(404, "Company profile not found");
+    }
+
+    res.respond(200, "Company profile fetched successfully", company);
+});
+
+// ##########----------Get Company Profile By ID----------##########
+const getCompanyProfileByID = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const company = await prisma.company.findFirst({
+        where: { id, isDeleted: false },
+        select: {
+            id: true,
+            companyName: true,
+            email: true,
+            address: true,
+            pincode: true,
+            createdAt: true,
+            updatedAt: true,
         },
     });
 
@@ -83,7 +107,7 @@ const getCompanyProfile = asyncHandler(async (req, res) => {
 // ##########----------Get Online Companies (For Customer)----------##########
 const getOnlineCompanies = asyncHandler(async (req, res) => {
     const userId = req.user;
-    const { search = "", page = 1, limit = 10 } = req.query;
+    const { search = "", page = 1, limit = 10, serviceCategoryId } = req.query;
 
     const customer = await prisma.customer.findFirst({
         where: { userId, isDeleted: false },
@@ -106,14 +130,16 @@ const getOnlineCompanies = asyncHandler(async (req, res) => {
             : undefined,
         ...(serviceCategoryId
             ? {
-                companyService: {
-                    some: {
-                        service: {
-                            categoryId: serviceCategoryId,
-                            isDeleted: false,
+                user: {
+                    companyService: {
+                        some: {
+                            service: {
+                                categoryId: serviceCategoryId,
+                                isDeleted: false,
+                            },
                         },
                     },
-                },
+                }
             }
             : {}),
     };
@@ -165,14 +191,16 @@ const getOnlineCompaniesForWeb = asyncHandler(async (req, res) => {
             : undefined,
         ...(serviceCategoryId
             ? {
-                companyService: {
-                    some: {
-                        service: {
-                            categoryId: serviceCategoryId,
-                            isDeleted: false,
+                user: {
+                    companyService: {
+                        some: {
+                            service: {
+                                categoryId: serviceCategoryId,
+                                isDeleted: false,
+                            },
                         },
                     },
-                },
+                }
             }
             : {}),
     };
@@ -210,6 +238,7 @@ module.exports = {
     completeCompanyProfile,
     toggleCompanyOnlineStatus,
     getCompanyProfile,
+    getCompanyProfileByID,
     getOnlineCompanies,
     getOnlineCompaniesForWeb
 }

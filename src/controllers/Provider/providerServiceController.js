@@ -21,7 +21,33 @@ const createProviderService = asyncHandler(async (req, res) => {
 
     const providerService = await prisma.providerService.create({
         data: {
-            providerId: user.id,
+            providerId: user.userId,
+            serviceId,
+            pricePerDay,
+        },
+    });
+
+    res.respond(201, "Provider service created successfully", providerService);
+});
+
+// ##########----------Create Provider Service For AI Model----------##########
+const createProviderServiceForAiModel = asyncHandler(async (req, res) => {
+    const { userId, serviceId, pricePerDay } = req.body;
+
+    if (!serviceId || !pricePerDay) {
+        return res.respond(400, "serviceId and pricePerDay are required!");
+    }
+
+    let user = await prisma.provider.findFirst({
+        where: { id: userId, isDeleted: false },
+    });
+    if (!user) {
+        return res.respond(404, "Provider not found!");
+    }
+
+    const providerService = await prisma.providerService.create({
+        data: {
+            providerId: user.userId,
             serviceId,
             pricePerDay,
         },
@@ -42,7 +68,43 @@ const getAllProviderServices = asyncHandler(async (req, res) => {
     }
 
     const providerServices = await prisma.providerService.findMany({
-        where: { providerId: user.id, isDeleted: false },
+        where: { providerId: userId, isDeleted: false },
+        include: {
+            service: true,
+        },
+    });
+
+    res.respond(200, "Provider services fetched successfully", providerServices);
+});
+
+// ##########----------Get All Provider Service For Ai Model----------##########
+const getAllProviderServicesForAiModel = asyncHandler(async (req, res) => {
+    const { userId, search } = req.query;
+
+    const provider = await prisma.provider.findFirst({
+        where: { id: userId, isDeleted: false },
+    });
+    if (!provider) {
+        return res.respond(404, "Provider not found!");
+    }
+
+    const providerServices = await prisma.providerService.findMany({
+        where: {
+            providerId: provider.userId,
+            isDeleted: false,
+            service: search
+                ? {
+                    name: {
+                        contains: search,
+                        mode: "insensitive",
+                    },
+                    description: {
+                        contains: search,
+                        mode: "insensitive",
+                    },
+                }
+                : undefined,
+        },
         include: {
             service: true,
         },
@@ -55,10 +117,16 @@ const getAllProviderServices = asyncHandler(async (req, res) => {
 const getAllProviderServicesForCustomer = asyncHandler(async (req, res) => {
     const { providerId } = req.params;
 
+    let user = await prisma.provider.findFirst({
+        where: { id: providerId, isDeleted: false },
+    });
+    if (!user) {
+        return res.respond(404, "Provider not found!");
+    }
+
     const providerServices = await prisma.providerService.findMany({
-        where: { providerId, isDeleted: false },
+        where: { providerId: user.userId, isDeleted: false },
         include: {
-            provider: true,
             service: true,
         },
     });
@@ -112,7 +180,9 @@ const deleteProviderService = asyncHandler(async (req, res) => {
 
 module.exports = {
     createProviderService,
+    createProviderServiceForAiModel,
     getAllProviderServices,
+    getAllProviderServicesForAiModel,
     getAllProviderServicesForCustomer,
     updateProviderService,
     deleteProviderService,

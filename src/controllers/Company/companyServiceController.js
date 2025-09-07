@@ -20,7 +20,7 @@ const createCompanyService = asyncHandler(async (req, res) => {
 
     const companyService = await prisma.companyService.create({
         data: {
-            companyId: user.id,
+            companyId: user.userId,
             serviceId,
             pricePerDay,
         },
@@ -41,7 +41,7 @@ const getAllCompanyServices = asyncHandler(async (req, res) => {
     }
 
     const companyServices = await prisma.companyService.findMany({
-        where: { companyId: user.id, isDeleted: false },
+        where: { companyId: user.userId, isDeleted: false },
         include: {
             service: true,
         },
@@ -54,10 +54,16 @@ const getAllCompanyServices = asyncHandler(async (req, res) => {
 const getAllCompanyServicesForCustomer = asyncHandler(async (req, res) => {
     const { companyId } = req.params;
 
+    let user = await prisma.company.findFirst({
+        where: { id: companyId, isDeleted: false },
+    });
+    if (!user) {
+        return res.respond(404, "Company not found!")
+    }
+
     const companyServices = await prisma.companyService.findMany({
-        where: { companyId, isDeleted: false },
+        where: { companyId: user.userId, isDeleted: false },
         include: {
-            company: true,
             service: true,
         },
     });

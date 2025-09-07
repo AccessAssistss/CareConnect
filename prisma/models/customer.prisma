@@ -27,4 +27,5 @@ model Customer {
     wallet Wallet?
     familyMember FamilyMember[]
     review Review[]
+    bookingRequest BookingRequest[]
 }

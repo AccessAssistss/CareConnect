@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 // ##########----------Complete Staff Profile----------##########
 const completeStaffProfile = asyncHandler(async (req, res) => {
     const userId = req.user;
-    const { name, email, gender, dob, address, countryId, stateId, pincode, skills = [] } = req.body;
+    const { name, email, gender, proficiency, skillVerification, language, dob, address, countryId, stateId, pincode, skills = [] } = req.body;
     let parsedSkills = [];
     if (skills) {
         try {
@@ -45,6 +45,9 @@ const completeStaffProfile = asyncHandler(async (req, res) => {
                 name,
                 email,
                 gender,
+                proficiency,
+                skillVerification,
+                language,
                 dob: dob ? new Date(dob) : null,
                 address,
                 countryId,

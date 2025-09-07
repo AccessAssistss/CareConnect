@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 // ##########----------Complete Provider Profile----------##########
 const completeProviderProfile = asyncHandler(async (req, res) => {
     const userId = req.user;
-    const { name, email, gender, dob, address, countryId, stateId, pincode, skills = [] } = req.body;
+    const { name, email, gender, proficiency, skillVerification, language, dob, address, countryId, stateId, pincode, skills = [] } = req.body;
     let parsedSkills = [];
     if (skills) {
         try {
@@ -41,6 +41,9 @@ const completeProviderProfile = asyncHandler(async (req, res) => {
                 name,
                 email,
                 gender,
+                proficiency,
+                skillVerification,
+                language,
                 dob: dob ? new Date(dob) : null,
                 address,
                 countryId,
@@ -133,30 +136,33 @@ const getProviderProfile = asyncHandler(async (req, res) => {
             name: true,
             email: true,
             gender: true,
+            proficiency: true,
+            skillVerification: true,
+            language: true,
             dob: true,
             address: true,
             pincode: true,
-        },
-        providerSkill: {
-            where: { isDeleted: false },
-            include: {
-                skill: {
-                    select: {
-                        id: true,
-                        name: true,
+            providerSkill: {
+                where: { isDeleted: false },
+                include: {
+                    skill: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
                     },
                 },
             },
-        },
-        providerDocument: {
-            where: { isDeleted: false },
-            select: {
-                id: true,
-                name: true,
-                govtID: true,
-                certification: true,
-                govtIDVerified: true,
-                certificationVerified: true,
+            providerDocument: {
+                where: { isDeleted: false },
+                select: {
+                    id: true,
+                    name: true,
+                    govtID: true,
+                    certification: true,
+                    govtIDVerified: true,
+                    certificationVerified: true,
+                },
             },
         },
     });
@@ -165,7 +171,45 @@ const getProviderProfile = asyncHandler(async (req, res) => {
         return res.respond(404, "Provider profile not found");
     }
 
-    res.respond(200, "Provider profile fetched successfully", customer);
+    res.respond(200, "Provider profile fetched successfully", provider);
+});
+
+// ##########----------Get Provider Profile By ID----------##########
+const getProviderProfileById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const provider = await prisma.provider.findFirst({
+        where: { id, isDeleted: false },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            gender: true,
+            proficiency: true,
+            skillVerification: true,
+            language: true,
+            dob: true,
+            address: true,
+            pincode: true,
+            providerSkill: {
+                where: { isDeleted: false },
+                include: {
+                    skill: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    if (!provider) {
+        return res.respond(404, "Provider profile not found");
+    }
+
+    res.respond(200, "Provider profile fetched successfully", provider);
 });
 
 // ##########----------Get Online Providers (For Customer)----------##########
@@ -200,15 +244,17 @@ const getOnlineProviders = asyncHandler(async (req, res) => {
         });
 
         whereClause.AND.push({
-            providerService: {
-                some: {
-                    isDeleted: false,
-                    service: {
-                        categoryId: serviceCategoryId,
+            user: {
+                providerService: {
+                    some: {
                         isDeleted: false,
+                        service: {
+                            categoryId: serviceCategoryId,
+                            isDeleted: false,
+                        },
                     },
                 },
-            },
+            }
         });
     }
 
@@ -232,6 +278,9 @@ const getOnlineProviders = asyncHandler(async (req, res) => {
             email: true,
             mobile: true,
             gender: true,
+            proficiency: true,
+            skillVerification: true,
+            language: true,
             dob: true,
             address: true,
             pincode: true,
@@ -280,15 +329,17 @@ const getOnlineProvidersForWeb = asyncHandler(async (req, res) => {
         });
 
         whereClause.AND.push({
-            providerService: {
-                some: {
-                    isDeleted: false,
-                    service: {
-                        categoryId: serviceCategoryId,
+            user: {
+                providerService: {
+                    some: {
                         isDeleted: false,
+                        service: {
+                            categoryId: serviceCategoryId,
+                            isDeleted: false,
+                        },
                     },
                 },
-            },
+            }
         });
     }
 
@@ -312,6 +363,9 @@ const getOnlineProvidersForWeb = asyncHandler(async (req, res) => {
             email: true,
             mobile: true,
             gender: true,
+            proficiency: true,
+            skillVerification: true,
+            language: true,
             dob: true,
             address: true,
             pincode: true,
@@ -339,6 +393,7 @@ module.exports = {
     completeProviderProfile,
     toggleProviderOnlineStatus,
     getProviderProfile,
+    getProviderProfileById,
     getOnlineProviders,
     getOnlineProvidersForWeb
 }

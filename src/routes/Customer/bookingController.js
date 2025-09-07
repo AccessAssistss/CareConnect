@@ -1,6 +1,7 @@
 const express = require("express");
 const validateToken = require("../../../middleware/validateJwtToken");
-const { createBookingRequest, acceptBookingRequest, declineBookingRequest, getCustomerBookings, getIncomingRequests, cancelBookingRequest } = require("../../controllers/Customer/bookingController");
+const { createBookingRequest, acceptBookingRequest, declineBookingRequest, getCustomerBookings, getIncomingRequests, cancelBookingRequest, getBookingHistory } = require("../../controllers/Customer/bookingController");
+const { createRazorpayOrder } = require("../../controllers/Customer/paymentController");
 
 const router = express.Router();
 
@@ -10,5 +11,7 @@ router.patch("/declineBookingRequest/:requestId", validateToken, declineBookingR
 router.get("/getCustomerBookings", validateToken, getCustomerBookings);
 router.get("/getIncomingRequests", validateToken, getIncomingRequests);
 router.patch("/cancelBookingRequest/:requestId", validateToken, cancelBookingRequest);
+router.post("/createRazorpayOrder", createRazorpayOrder);
+router.get("/getBookingHistory", getBookingHistory);
 
 module.exports = router;

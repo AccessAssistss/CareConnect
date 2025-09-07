@@ -40,4 +40,6 @@ model CompanyService {
 
     company CustomUser @relation(fields: [companyId], references: [id])
     service Service    @relation(fields: [serviceId], references: [id])
+
+    bookingRequest BookingRequest[]
 }

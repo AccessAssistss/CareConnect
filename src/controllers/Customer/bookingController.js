@@ -28,7 +28,7 @@ const getWallet = async (entityType, entityId) => {
 
 // ##########----------Create Booking Request----------##########
 const createBookingRequest = asyncHandler(async (req, res) => {
-    const customerId = req.user;
+    const userId = req.user;
     const { familyMemberId, providerSvcId, companySvcId, startDate, endDate } = req.body;
 
     if (!providerSvcId && !companySvcId) {
@@ -135,7 +135,7 @@ const createBookingRequest = asyncHandler(async (req, res) => {
 
         const bookingRequest = await prismaTx.bookingRequest.create({
             data: {
-                customerId,
+                customerId: customer.id,
                 familyMemberId,
                 providerSvcId,
                 companySvcId,
@@ -299,12 +299,64 @@ const declineBookingRequest = asyncHandler(async (req, res) => {
 const getCustomerBookings = asyncHandler(async (req, res) => {
     const customerId = req.user;
 
+    const customer = await prisma.customer.findFirst({
+        where: { userId: customerId },
+    });
+    if (!customer) {
+        return res.respond(404, "Customer profile not found!");
+    }
+
     const bookings = await prisma.bookingRequest.findMany({
-        where: { customerId },
-        include: {
-            bookings: true,
-            companySvc: { include: { service: true, company: true } },
-            providerSvc: { include: { service: true, provider: true } },
+        where: { customerId: customer.id },
+        select: {
+            id: true,
+            startDate: true,
+            endDate: true,
+            totalAmount: true,
+            status: true,
+            createdAt: true,
+            companySvc: {
+                select: {
+                    id: true,
+                    pricePerDay: true,
+                    service: {
+                        select: { id: true, name: true },
+                    },
+                    company: {
+                        // 👇 fetch company profile
+                        select: {
+                            company: {
+                                select: {
+                                    id: true,
+                                    companyName: true,
+                                    companyLogo: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            providerSvc: {
+                select: {
+                    id: true,
+                    pricePerDay: true,
+                    service: {
+                        select: { id: true, name: true },
+                    },
+                    provider: {
+                        // 👇 fetch provider profile
+                        select: {
+                            provider: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    profilePhoto: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
         },
     });
 
@@ -319,7 +371,32 @@ const getIncomingRequests = asyncHandler(async (req, res) => {
     if (provider) {
         const requests = await prisma.bookingRequest.findMany({
             where: { providerSvc: { providerId: provider.id } },
-            include: { bookings: true, customer: true, providerSvc: { include: { service: true } } },
+            select: {
+                id: true,
+                startDate: true,
+                endDate: true,
+                status: true,
+                customer: {
+                    select: { id: true, name: true, mobile: true }
+                },
+                familyMember: {
+                    select: {
+                        id: true,
+                        name: true,
+                        gender: true,
+                        age: true,
+                        relation: true,
+                        profilePhoto: true
+                    }
+                },
+                providerSvc: {
+                    select: {
+                        id: true,
+                        price: true,
+                        service: { select: { id: true, name: true, description: true } }
+                    }
+                },
+            }
         });
         return res.respond(200, "Incoming provider requests fetched successfully", requests);
     }
@@ -328,7 +405,32 @@ const getIncomingRequests = asyncHandler(async (req, res) => {
     if (company) {
         const requests = await prisma.bookingRequest.findMany({
             where: { companySvc: { companyId: company.id } },
-            include: { bookings: true, customer: true, companySvc: { include: { service: true } } },
+            select: {
+                id: true,
+                startDate: true,
+                endDate: true,
+                status: true,
+                customer: {
+                    select: { id: true, name: true, mobile: true }
+                },
+                companySvc: {
+                    select: {
+                        id: true,
+                        price: true,
+                        service: { select: { id: true, name: true, description: true } }
+                    }
+                },
+                familyMember: {
+                    select: {
+                        id: true,
+                        name: true,
+                        gender: true,
+                        age: true,
+                        relation: true,
+                        profilePhoto: true
+                    }
+                },
+            }
         });
         return res.respond(200, "Incoming company requests fetched successfully", requests);
     }
@@ -383,11 +485,141 @@ const cancelBookingRequest = asyncHandler(async (req, res) => {
     res.respond(200, "Booking cancelled successfully");
 });
 
+// ##########----------Get Booking History----------##########
+const getBookingHistory = asyncHandler(async (req, res) => {
+    const userId = req.user;
+
+    const statusFilter = {
+        status: { in: ["DECLINED", "CANCELLED", "COMPLETED"] }
+    };
+
+    // Customer Booking History
+    const customer = await prisma.customer.findFirst({ where: { userId } });
+    if (customer) {
+        const history = await prisma.bookingRequest.findMany({
+            where: { customerId: customer.id, ...statusFilter },
+            orderBy: { createdAt: "desc" },
+            select: {
+                id: true,
+                startDate: true,
+                endDate: true,
+                totalAmount: true,
+                status: true,
+                createdAt: true,
+                familyMember: {
+                    select: {
+                        id: true,
+                        name: true,
+                        relation: true,
+                        profilePhoto: true
+                    }
+                },
+                providerSvc: {
+                    select: {
+                        id: true,
+                        pricePerDay: true,
+                        service: { select: { id: true, name: true } },
+                        provider: {
+                            select: { id: true, name: true }
+                        }
+                    }
+                },
+                companySvc: {
+                    select: {
+                        id: true,
+                        pricePerDay: true,
+                        service: { select: { id: true, name: true } },
+                        company: {
+                            select: { id: true, name: true }
+                        }
+                    }
+                },
+            }
+        });
+        return res.respond(200, "Customer booking history fetched successfully", history);
+    }
+
+    // Provider Booking History
+    const provider = await prisma.provider.findFirst({ where: { userId } });
+    if (provider) {
+        const history = await prisma.bookingRequest.findMany({
+            where: { providerSvc: { providerId: provider.id }, ...statusFilter },
+            orderBy: { createdAt: "desc" },
+            select: {
+                id: true,
+                startDate: true,
+                endDate: true,
+                totalAmount: true,
+                status: true,
+                createdAt: true,
+                customer: {
+                    select: { id: true, name: true, mobile: true }
+                },
+                familyMember: {
+                    select: {
+                        id: true,
+                        name: true,
+                        relation: true,
+                        profilePhoto: true
+                    }
+                },
+                providerSvc: {
+                    select: {
+                        id: true,
+                        pricePerDay: true,
+                        service: { select: { id: true, name: true } }
+                    }
+                },
+            }
+        });
+        return res.respond(200, "Provider booking history fetched successfully", history);
+    }
+
+    // Company Booking History
+    const company = await prisma.company.findFirst({ where: { userId } });
+    if (company) {
+        const history = await prisma.bookingRequest.findMany({
+            where: { companySvc: { companyId: company.id }, ...statusFilter },
+            orderBy: { createdAt: "desc" },
+            select: {
+                id: true,
+                startDate: true,
+                endDate: true,
+                totalAmount: true,
+                status: true,
+                createdAt: true,
+                customer: {
+                    select: { id: true, name: true, mobile: true }
+                },
+                familyMember: {
+                    select: {
+                        id: true,
+                        name: true,
+                        relation: true,
+                        profilePhoto: true
+                    }
+                },
+                companySvc: {
+                    select: {
+                        id: true,
+                        pricePerDay: true,
+                        service: { select: { id: true, name: true } }
+                    }
+                },
+            }
+        });
+        return res.respond(200, "Company booking history fetched successfully", history);
+    }
+
+    res.respond(404, "No booking history found for this user");
+});
+
 module.exports = {
     createBookingRequest,
     acceptBookingRequest,
     declineBookingRequest,
     getCustomerBookings,
     getIncomingRequests,
-    cancelBookingRequest
+    cancelBookingRequest,
+    getBookingHistory
 };
