@@ -49,9 +49,9 @@ model StaffSkill {
 model StaffDocument {
     id                    String   @id @default(uuid())
     staffId               String   @unique
-    name                  String   @db.VarChar(150)
-    govtID                String   @db.VarChar(300)
-    certification         String   @db.VarChar(300)
+    name                  String?   @db.VarChar(150)
+    govtID                String?   @db.VarChar(300)
+    certification         String?   @db.VarChar(300)
     govtIDVerified        Boolean  @default(false)
     certificationVerified Boolean  @default(false)
     createdAt             DateTime @default(now())

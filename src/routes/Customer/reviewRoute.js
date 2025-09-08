@@ -6,8 +6,8 @@ const router = express.Router();
 
 router.post("/addReview", validateToken, addReview);
 router.put("/editReview/:reviewId", validateToken, editReview);
-router.get("/getProviderReviews/:providerId", validateToken, getProviderReviews);
-router.get("/getCompanyReviews/:companyId", validateToken, getCompanyReviews);
+router.get("/getProviderReviews/:providerId", getProviderReviews);
+router.get("/getCompanyReviews/:companyId", getCompanyReviews);
 router.get("/deleteReview/:reviewId", validateToken, deleteReview);
 
 module.exports = router;

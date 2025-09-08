@@ -71,21 +71,30 @@ const completeProviderProfile = asyncHandler(async (req, res) => {
         }
 
         if (govtIDUrl || certificationUrl) {
-            await tx.providerDocument.updateMany({
+            const existingDoc = await tx.providerDocument.findFirst({
                 where: { providerId: updatedProvider.id },
-                data: { isDeleted: true },
             });
 
-            await tx.providerDocument.create({
-                data: {
-                    providerId: updatedProvider.id,
-                    name: "Provider Documents",
-                    govtID: govtIDUrl || null,
-                    certification: certificationUrl || null,
-                    govtIDVerified: false,
-                    certificationVerified: false,
-                },
-            });
+            if (existingDoc) {
+                await tx.providerDocument.update({
+                    where: { id: existingDoc.id },
+                    data: {
+                        ...(govtIDUrl && { govtID: govtIDUrl, govtIDVerified: false }),
+                        ...(certificationUrl && { certification: certificationUrl, certificationVerified: false }),
+                    },
+                });
+            } else {
+                await tx.providerDocument.create({
+                    data: {
+                        providerId: updatedProvider.id,
+                        name: "Provider Documents",
+                        govtID: govtIDUrl || null,
+                        certification: certificationUrl || null,
+                        govtIDVerified: false,
+                        certificationVerified: false,
+                    },
+                });
+            }
         }
 
         return tx.provider.findFirst({
@@ -135,6 +144,7 @@ const getProviderProfile = asyncHandler(async (req, res) => {
             id: true,
             name: true,
             email: true,
+            mobile: true,
             gender: true,
             proficiency: true,
             skillVerification: true,
@@ -183,6 +193,7 @@ const getProviderProfileById = asyncHandler(async (req, res) => {
         select: {
             id: true,
             name: true,
+            mobile: true,
             email: true,
             gender: true,
             proficiency: true,

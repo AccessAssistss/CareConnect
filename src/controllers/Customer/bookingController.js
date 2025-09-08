@@ -4,8 +4,8 @@ const { asyncHandler } = require("../../../utils/asyncHandler");
 const prisma = new PrismaClient();
 
 // ##########----------Helper: Get Wallet by Entity----------##########
-const getWallet = async (entityType, entityId) => {
-    let wallet = await prisma.wallet.findFirst({
+const getWallet = async (entityType, entityId, prismaClient = prisma) => {
+    let wallet = await prismaClient.wallet.findFirst({
         where: {
             ...(entityType === "Customer" && { customerId: entityId }),
             ...(entityType === "Provider" && { providerId: entityId }),
@@ -20,7 +20,7 @@ const getWallet = async (entityType, entityId) => {
             ...(entityType === "Company" && { companyId: entityId }),
             balance: 0,
         };
-        wallet = await prisma.wallet.create({ data: createData });
+        wallet = await prismaClient.wallet.create({ data: createData });
     }
 
     return wallet;
@@ -212,7 +212,11 @@ const acceptBookingRequest = asyncHandler(async (req, res) => {
             const providerService = await prismaTx.providerService.findFirst({
                 where: { id: bookingRequest.providerSvcId },
             });
-            wallet = await getWallet("Provider", providerService.providerId);
+            const provider = await prismaTx.provider.findFirst({
+                where: { userId: providerService.providerId },
+            });
+            wallet = await getWallet("Provider", provider.id, prismaTx);
+
             if (!wallet) {
                 wallet = await prismaTx.wallet.create({
                     data: { providerId: providerService.providerId, balance: 0 },
@@ -222,7 +226,11 @@ const acceptBookingRequest = asyncHandler(async (req, res) => {
             const companyService = await prismaTx.companyService.findFirst({
                 where: { id: bookingRequest.companySvcId },
             });
-            wallet = await getWallet("Company", companyService.companyId);
+            const company = await prismaTx.company.findFirst({
+                where: { userId: companyService.companyId },
+            });
+            wallet = await getWallet("Company", company.id, prismaTx);
+
             if (!wallet) {
                 wallet = await prismaTx.wallet.create({
                     data: { companyId: companyService.companyId, balance: 0 },
@@ -292,7 +300,7 @@ const declineBookingRequest = asyncHandler(async (req, res) => {
         });
     });
 
-    res.respond(200, "Booking request declined successfully", bookingRequest);
+    res.respond(200, "Booking request declined successfully");
 });
 
 // ##########----------Get Bookings for Customer----------##########
@@ -370,7 +378,7 @@ const getIncomingRequests = asyncHandler(async (req, res) => {
     const provider = await prisma.provider.findFirst({ where: { userId } });
     if (provider) {
         const requests = await prisma.bookingRequest.findMany({
-            where: { providerSvc: { providerId: provider.id } },
+            where: { providerSvc: { providerId: provider.userId } },
             select: {
                 id: true,
                 startDate: true,
@@ -392,7 +400,7 @@ const getIncomingRequests = asyncHandler(async (req, res) => {
                 providerSvc: {
                     select: {
                         id: true,
-                        price: true,
+                        pricePerDay: true,
                         service: { select: { id: true, name: true, description: true } }
                     }
                 },
@@ -404,7 +412,7 @@ const getIncomingRequests = asyncHandler(async (req, res) => {
     const company = await prisma.company.findFirst({ where: { userId } });
     if (company) {
         const requests = await prisma.bookingRequest.findMany({
-            where: { companySvc: { companyId: company.id } },
+            where: { companySvc: { companyId: company.userId } },
             select: {
                 id: true,
                 startDate: true,
@@ -416,7 +424,7 @@ const getIncomingRequests = asyncHandler(async (req, res) => {
                 companySvc: {
                     select: {
                         id: true,
-                        price: true,
+                        pricePerDay: true,
                         service: { select: { id: true, name: true, description: true } }
                     }
                 },

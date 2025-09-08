@@ -23,4 +23,6 @@ model Service {
 
     providerService ProviderService[]
     companyService  CompanyService[]
+
+    @@unique([name, categoryId])
 }
