@@ -1,5 +1,5 @@
 const express = require("express");
-const { completeProviderProfile, toggleProviderOnlineStatus, getOnlineProviders, getOnlineProvidersForWeb, getProviderProfile, getProviderProfileById } = require("../../controllers/Provider/profileController");
+const { completeProviderProfile, toggleProviderOnlineStatus, getOnlineProviders, getOnlineProvidersForWeb, getProviderProfile, getProviderProfileById, createProvider } = require("../../controllers/Provider/profileController");
 const validateToken = require("../../../middleware/validateJwtToken");
 const multerErrorHandler = require("../../../middleware/multerErrorHandler");
 const createUploadMiddleware = require("../../../middleware/upload");
@@ -15,5 +15,6 @@ router.get("/getProviderProfile", validateToken, getProviderProfile);
 router.get("/getProviderProfileById/:id", getProviderProfileById);
 router.get("/getOnlineProviders", validateToken, getOnlineProviders);
 router.get("/getOnlineProvidersForWeb", getOnlineProvidersForWeb);
+router.post("/createProvider", createProvider);
 
 module.exports = router;

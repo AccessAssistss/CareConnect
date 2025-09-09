@@ -90,6 +90,29 @@ const getAllServices = asyncHandler(async (req, res) => {
     res.respond(200, "Services fetched successfully", services);
 });
 
+// ##########----------Get All Services By Category----------##########
+const getAllServicesByCategory = asyncHandler(async (req, res) => {
+    const { categoryId } = req.params;
+    if (!categoryId) {
+        return res.respond(400, "categoryId is required!");
+    }
+
+    const category = await prisma.serviceCategory.findUnique({
+        where: { id: categoryId, isDeleted: false },
+    });
+
+    if (!category) {
+        return res.respond(404, "Service category not found");
+    }
+
+    const services = await prisma.service.findMany({
+        where: { categoryId, isDeleted: false },
+        include: { category: true },
+    });
+
+    res.respond(200, "Services fetched successfully", services);
+});
+
 // ##########----------Get Single Service----------##########
 const getServiceById = asyncHandler(async (req, res) => {
     const { id } = req.params;
@@ -137,6 +160,7 @@ module.exports = {
     deleteServiceCategory,
     createService,
     getAllServices,
+    getAllServicesByCategory,
     getServiceById,
     updateService,
     deleteService,

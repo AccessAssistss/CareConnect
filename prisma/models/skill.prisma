@@ -4,6 +4,7 @@ model Skill {
     name      String   @unique @db.VarChar(100)
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+    isDeleted Boolean  @default(false)
 
     providerSkill ProviderSkill[]
     staffSkill    StaffSkill[]

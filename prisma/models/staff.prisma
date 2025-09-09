@@ -2,14 +2,15 @@
 model Staff {
     id                String    @id @default(uuid())
     userId            String?   @unique
+    companyId         String?
     name              String?   @db.VarChar(100)
     email             String?   @db.VarChar(100)
     mobile            String    @db.VarChar(10)
     gender            Gender?
+    profilePhoto      String?   @db.VarChar(300)
     proficiency       String?   @db.VarChar(100)
     skillVerification String?   @db.VarChar(100)
     language          String?   @db.VarChar(100)
-    profilePhoto      String?   @db.VarChar(300)
     fcmToken          String?   @db.VarChar(100)
     dob               DateTime?
     address           String?
@@ -26,6 +27,7 @@ model Staff {
     user    CustomUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
     country Country?    @relation(fields: [countryId], references: [id])
     state   State?      @relation(fields: [stateId], references: [id])
+    company Company?    @relation(fields: [companyId], references: [id])
 
     booking       Booking[]
     staffDocument StaffDocument?
@@ -49,9 +51,9 @@ model StaffSkill {
 model StaffDocument {
     id                    String   @id @default(uuid())
     staffId               String   @unique
-    name                  String?   @db.VarChar(150)
-    govtID                String?   @db.VarChar(300)
-    certification         String?   @db.VarChar(300)
+    name                  String?  @db.VarChar(150)
+    govtID                String?  @db.VarChar(300)
+    certification         String?  @db.VarChar(300)
     govtIDVerified        Boolean  @default(false)
     certificationVerified Boolean  @default(false)
     createdAt             DateTime @default(now())

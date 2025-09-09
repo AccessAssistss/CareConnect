@@ -23,11 +23,20 @@ const addReview = asyncHandler(async (req, res) => {
         return res.respond(404, "Customer not found");
     }
 
+    if (providerId) {
+        const providerExists = await prisma.provider.findUnique({ where: { id: providerId } });
+        if (!providerExists) return res.respond(404, "Provider not found");
+    }
+    if (companyId) {
+        const companyExists = await prisma.company.findUnique({ where: { id: companyId } });
+        if (!companyExists) return res.respond(404, "Company not found");
+    }
+
     const review = await prisma.review.create({
         data: {
             customerId: customer.id,
-            providerId,
-            companyId,
+            providerId: providerId || null,
+            companyId: companyId || null,
             rating,
             comment,
         },

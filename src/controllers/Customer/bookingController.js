@@ -26,6 +26,9 @@ const getWallet = async (entityType, entityId, prismaClient = prisma) => {
     return wallet;
 };
 
+// Helper: random 4-digit code
+const generateCode = () => Math.floor(1000 + Math.random() * 9000).toString();
+
 // ##########----------Create Booking Request----------##########
 const createBookingRequest = asyncHandler(async (req, res) => {
     const userId = req.user;
@@ -106,6 +109,8 @@ const createBookingRequest = asyncHandler(async (req, res) => {
     }
 
     const totalAmount = pricePerDay * days;
+    const startCode = generateCode()
+    const endCode = generateCode()
 
     const result = await prisma.$transaction(async (prismaTx) => {
         let wallet = await getWallet("Customer", customer.id);
@@ -142,6 +147,8 @@ const createBookingRequest = asyncHandler(async (req, res) => {
                 startDate: start,
                 endDate: end,
                 totalAmount,
+                startCode,
+                endCode,
             },
         });
 
@@ -168,7 +175,6 @@ const acceptBookingRequest = asyncHandler(async (req, res) => {
         where: { id: requestId },
         include: { bookings: true },
     });
-
     if (!bookingRequest) return res.respond(404, "Booking request not found");
 
     if (bookingRequest.companySvcId && !staffId) {
@@ -183,7 +189,7 @@ const acceptBookingRequest = asyncHandler(async (req, res) => {
                 where: {
                     id: { notIn: bookingRequest.bookings.map(b => b.id) },
                     request: { providerSvcId: bookingRequest.providerSvcId },
-                    status: { in: ["CONFIRMED", "ASSIGNED"] },
+                    status: { in: ["CONFIRMED", "ONGOING"] },
                     date: { in: dates },
                 },
             });
@@ -198,7 +204,7 @@ const acceptBookingRequest = asyncHandler(async (req, res) => {
                     id: { notIn: bookingRequest.bookings.map(b => b.id) },
                     staffId,
                     request: { companySvcId: bookingRequest.companySvcId },
-                    status: { in: ["CONFIRMED", "ASSIGNED"] },
+                    status: { in: ["CONFIRMED", "ONGOING"] },
                     date: { in: dates },
                 },
             });
@@ -207,50 +213,7 @@ const acceptBookingRequest = asyncHandler(async (req, res) => {
             }
         }
 
-        let wallet;
-        if (bookingRequest.providerSvcId) {
-            const providerService = await prismaTx.providerService.findFirst({
-                where: { id: bookingRequest.providerSvcId },
-            });
-            const provider = await prismaTx.provider.findFirst({
-                where: { userId: providerService.providerId },
-            });
-            wallet = await getWallet("Provider", provider.id, prismaTx);
-
-            if (!wallet) {
-                wallet = await prismaTx.wallet.create({
-                    data: { providerId: providerService.providerId, balance: 0 },
-                });
-            }
-        } else {
-            const companyService = await prismaTx.companyService.findFirst({
-                where: { id: bookingRequest.companySvcId },
-            });
-            const company = await prismaTx.company.findFirst({
-                where: { userId: companyService.companyId },
-            });
-            wallet = await getWallet("Company", company.id, prismaTx);
-
-            if (!wallet) {
-                wallet = await prismaTx.wallet.create({
-                    data: { companyId: companyService.companyId, balance: 0 },
-                });
-            }
-        }
-
-        await prismaTx.wallet.update({
-            where: { id: wallet.id },
-            data: { balance: wallet.balance + bookingRequest.totalAmount },
-        });
-
-        await prismaTx.walletTransaction.create({
-            data: {
-                walletId: wallet.id,
-                type: "CREDIT",
-                amount: bookingRequest.totalAmount,
-                description: "Booking payment received",
-            },
-        });
+       
 
         await prismaTx.bookingRequest.update({
             where: { id: requestId },
@@ -264,6 +227,109 @@ const acceptBookingRequest = asyncHandler(async (req, res) => {
     });
 
     res.respond(200, "Booking request accepted successfully");
+});
+
+// ##########----------Start Service----------##########
+const startService = asyncHandler(async (req, res) => {
+    const { requestId } = req.params;
+    const { code } = req.body;
+
+    const bookingRequest = await prisma.bookingRequest.findFirst({
+        where: { id: requestId },
+    });
+
+    if (!bookingRequest) return res.respond(404, "Booking request not found");
+
+    if (bookingRequest.startCode !== code) {
+        return res.respond(400, "Invalid start code");
+    }
+
+    if (bookingRequest.status !== "CONFIRMED") {
+        return res.respond(400, "Service cannot be started in current status");
+    }
+
+    await prisma.$transaction(async (prismaTx) => {
+        await prismaTx.bookingRequest.update({
+            where: { id: requestId },
+            data: { status: "ONGOING" },
+        });
+
+        await prismaTx.booking.updateMany({
+            where: { requestId },
+            data: { status: "ONGOING" },
+        });
+    });
+
+    res.respond(200, "Service started successfully");
+});
+
+// ##########----------End Service----------##########
+const endService = asyncHandler(async (req, res) => {
+    const { requestId } = req.params;
+    const { code } = req.body;
+
+    const bookingRequest = await prisma.bookingRequest.findFirst({
+        where: { id: requestId },
+    });
+    if (!bookingRequest) return res.respond(404, "Booking request not found");
+
+    if (bookingRequest.endCode !== code) {
+        return res.respond(400, "Invalid end code");
+    }
+
+    if (bookingRequest.status !== "ONGOING") {
+        return res.respond(400, "Service cannot be ended in current status");
+    }
+
+    await prisma.$transaction(async (prismaTx) => {
+        let wallet;
+
+        if (bookingRequest.providerSvcId) {
+            const providerService = await prismaTx.providerService.findFirst({
+                where: { id: bookingRequest.providerSvcId },
+            });
+
+            const provider = await prismaTx.provider.findFirst({
+                where: { userId: providerService.providerId },
+            });
+
+            wallet = await getWallet("Provider", provider.id, prismaTx);
+        } else {
+            const companyService = await prismaTx.companyService.findFirst({
+                where: { id: bookingRequest.companySvcId },
+            });
+            const company = await prismaTx.company.findFirst({
+                where: { userId: companyService.companyId },
+            });
+            wallet = await getWallet("Company", company.id, prismaTx);
+        }
+
+        await prismaTx.wallet.update({
+            where: { id: wallet.id },
+            data: { balance: wallet.balance + bookingRequest.totalAmount },
+        });
+
+        await prismaTx.walletTransaction.create({
+            data: {
+                walletId: wallet.id,
+                type: "CREDIT",
+                amount: bookingRequest.totalAmount,
+                description: "Booking payment released",
+            },
+        });
+
+        await prismaTx.bookingRequest.update({
+            where: { id: requestId },
+            data: { status: "COMPLETED" },
+        });
+
+        await prismaTx.booking.updateMany({
+            where: { requestId },
+            data: { status: "COMPLETED" },
+        });
+    });
+
+    res.respond(200, "Service ended successfully and payment released");
 });
 
 // ##########----------Decline Booking----------##########
@@ -320,6 +386,8 @@ const getCustomerBookings = asyncHandler(async (req, res) => {
             id: true,
             startDate: true,
             endDate: true,
+            startCode: true,
+            endCode: true,
             totalAmount: true,
             status: true,
             createdAt: true,
@@ -331,7 +399,6 @@ const getCustomerBookings = asyncHandler(async (req, res) => {
                         select: { id: true, name: true },
                     },
                     company: {
-                        // 👇 fetch company profile
                         select: {
                             company: {
                                 select: {
@@ -352,7 +419,6 @@ const getCustomerBookings = asyncHandler(async (req, res) => {
                         select: { id: true, name: true },
                     },
                     provider: {
-                        // 👇 fetch provider profile
                         select: {
                             provider: {
                                 select: {
@@ -544,7 +610,7 @@ const getBookingHistory = asyncHandler(async (req, res) => {
                 },
             }
         });
-        return res.respond(200, "Customer booking history fetched successfully", history);
+        return res.respond(200, "Customer booking history fetched successfully!", history);
     }
 
     // Provider Booking History
@@ -622,12 +688,103 @@ const getBookingHistory = asyncHandler(async (req, res) => {
     res.respond(404, "No booking history found for this user");
 });
 
+// ##########----------Get Staff by Booking Request----------##########
+const getStaffByBookingRequest = asyncHandler(async (req, res) => {
+    const { requestId } = req.params;
+
+    const bookingRequest = await prisma.bookingRequest.findFirst({
+        where: { id: requestId },
+        include: {
+            bookings: {
+                where: { staffId: { not: null } },
+                take: 1,
+                include: {
+                    staff: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            mobile: true,
+                            profilePhoto: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    if (!bookingRequest) {
+        return res.respond(404, "Booking request not found");
+    }
+
+    if (!bookingRequest.bookings.length) {
+        return res.respond(200, "No staff assigned yet", null);
+    }
+
+    const staff = bookingRequest.bookings[0].staff;
+
+    res.respond(200, "Staff fetched successfully", staff);
+});
+
+// ##########----------Get Incoming Requests for Staff----------##########
+const getIncomingRequestsForStaff = asyncHandler(async (req, res) => {
+    const userId = req.user;
+
+    const staff = await prisma.staff.findFirst({ where: { userId } });
+    if (!staff) {
+        return res.respond(404, "Staff profile not found!");
+    }
+
+    const requests = await prisma.bookingRequest.findMany({
+        where: {
+            bookings: {
+                some: { staffId: staff.id },
+            },
+            status: { in: ["PENDING", "CONFIRMED", "ONGOING"] },
+        },
+        select: {
+            id: true,
+            startDate: true,
+            endDate: true,
+            status: true,
+            totalAmount: true,
+            createdAt: true,
+            customer: {
+                select: { id: true, name: true, mobile: true }
+            },
+            familyMember: {
+                select: {
+                    id: true,
+                    name: true,
+                    gender: true,
+                    age: true,
+                    relation: true,
+                    profilePhoto: true
+                }
+            },
+            companySvc: {
+                select: {
+                    id: true,
+                    pricePerDay: true,
+                    service: { select: { id: true, name: true, description: true } }
+                }
+            },
+        },
+    });
+
+    res.respond(200, "Incoming staff booking requests fetched successfully", requests);
+});
+
 module.exports = {
     createBookingRequest,
     acceptBookingRequest,
+    startService,
+    endService,
     declineBookingRequest,
     getCustomerBookings,
     getIncomingRequests,
     cancelBookingRequest,
-    getBookingHistory
+    getBookingHistory,
+    getStaffByBookingRequest,
+    getIncomingRequestsForStaff
 };

@@ -10,7 +10,7 @@ const completeProviderProfile = asyncHandler(async (req, res) => {
     let parsedSkills = [];
     if (skills) {
         try {
-            parsedSkills = JSON.parse(skills);
+            parsedSkills = Array.isArray(skills) ? skills : JSON.parse(skills);
         } catch (err) {
             parsedSkills = [skills];
         }
@@ -152,6 +152,7 @@ const getProviderProfile = asyncHandler(async (req, res) => {
             dob: true,
             address: true,
             pincode: true,
+            isOnline: true,
             providerSkill: {
                 where: { isDeleted: false },
                 include: {
@@ -202,6 +203,7 @@ const getProviderProfileById = asyncHandler(async (req, res) => {
             dob: true,
             address: true,
             pincode: true,
+            isOnline: true,
             providerSkill: {
                 where: { isDeleted: false },
                 include: {
@@ -226,7 +228,7 @@ const getProviderProfileById = asyncHandler(async (req, res) => {
 // ##########----------Get Online Providers (For Customer)----------##########
 const getOnlineProviders = asyncHandler(async (req, res) => {
     const userId = req.user;
-    const { search = "", page = 1, limit = 10, serviceCategoryId, skillIds } = req.query;
+    const { search = "", page = 1, limit = 10, serviceCategoryId, serviceId, skillIds } = req.query;
 
     const customer = await prisma.customer.findFirst({
         where: { userId, isDeleted: false },
@@ -251,10 +253,6 @@ const getOnlineProviders = asyncHandler(async (req, res) => {
 
     if (serviceCategoryId) {
         whereClause.AND.push({
-            providerSkill: { some: { isDeleted: false } },
-        });
-
-        whereClause.AND.push({
             user: {
                 providerService: {
                     some: {
@@ -263,6 +261,19 @@ const getOnlineProviders = asyncHandler(async (req, res) => {
                             categoryId: serviceCategoryId,
                             isDeleted: false,
                         },
+                    },
+                },
+            }
+        });
+    }
+
+    if (serviceId) {
+        whereClause.AND.push({
+            user: {
+                providerService: {
+                    some: {
+                        isDeleted: false,
+                        serviceId: serviceId,
                     },
                 },
             }
@@ -281,7 +292,7 @@ const getOnlineProviders = asyncHandler(async (req, res) => {
         });
     }
 
-    const providers = await prisma.provider.findMany({
+    let providers = await prisma.provider.findMany({
         where: whereClause,
         select: {
             id: true,
@@ -295,9 +306,56 @@ const getOnlineProviders = asyncHandler(async (req, res) => {
             dob: true,
             address: true,
             pincode: true,
+            isOnline: true,
+            review: {
+                where: { isDeleted: false },
+                select: { rating: true }
+            },
+            user: {
+                select: {
+                    providerService: {
+                        where: { isDeleted: false },
+                        select: {
+                            service: {
+                                select: {
+                                    category: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
         },
         skip,
         take: Number(limit),
+    });
+
+    providers = providers.map(p => {
+        const ratings = p.review.map(r => r.rating);
+        const avgRating = ratings.length
+            ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
+            : null;
+
+        const categories =
+            p.user?.providerService
+                ?.map((ps) => ps.service?.category)
+                .filter((c) => c) || [];
+
+        const uniqueCategories = Array.from(
+            new Map(categories.map((c) => [c.id, c])).values()
+        );
+
+        const { review, user, ...rest } = p;
+        return {
+            ...rest,
+            avgRating,
+            serviceCategories: uniqueCategories,
+        };
     });
 
     const totalCount = await prisma.provider.count({
@@ -317,7 +375,7 @@ const getOnlineProviders = asyncHandler(async (req, res) => {
 
 // ##########----------Get Online Providers For Web----------##########
 const getOnlineProvidersForWeb = asyncHandler(async (req, res) => {
-    const { search = "", page = 1, limit = 10, serviceCategoryId, skillIds } = req.query;
+    const { search = "", page = 1, limit = 10, serviceCategoryId, serviceId, skillIds } = req.query;
 
     const skip = (Number(page) - 1) * Number(limit);
 
@@ -336,10 +394,6 @@ const getOnlineProvidersForWeb = asyncHandler(async (req, res) => {
 
     if (serviceCategoryId) {
         whereClause.AND.push({
-            providerSkill: { some: { isDeleted: false } },
-        });
-
-        whereClause.AND.push({
             user: {
                 providerService: {
                     some: {
@@ -348,6 +402,19 @@ const getOnlineProvidersForWeb = asyncHandler(async (req, res) => {
                             categoryId: serviceCategoryId,
                             isDeleted: false,
                         },
+                    },
+                },
+            }
+        });
+    }
+
+    if (serviceId) {
+        whereClause.AND.push({
+            user: {
+                providerService: {
+                    some: {
+                        isDeleted: false,
+                        serviceId: serviceId,
                     },
                 },
             }
@@ -366,7 +433,7 @@ const getOnlineProvidersForWeb = asyncHandler(async (req, res) => {
         });
     }
 
-    const providers = await prisma.provider.findMany({
+    let providers = await prisma.provider.findMany({
         where: whereClause,
         select: {
             id: true,
@@ -380,9 +447,56 @@ const getOnlineProvidersForWeb = asyncHandler(async (req, res) => {
             dob: true,
             address: true,
             pincode: true,
+            isOnline: true,
+            review: {
+                where: { isDeleted: false },
+                select: { rating: true }
+            },
+            user: {
+                select: {
+                    providerService: {
+                        where: { isDeleted: false },
+                        select: {
+                            service: {
+                                select: {
+                                    category: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
         },
         skip,
         take: Number(limit),
+    });
+
+    providers = providers.map(p => {
+        const ratings = p.review.map(r => r.rating);
+        const avgRating = ratings.length
+            ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
+            : null;
+
+        const categories =
+            p.user?.providerService
+                ?.map((ps) => ps.service?.category)
+                .filter((c) => c) || [];
+
+        const uniqueCategories = Array.from(
+            new Map(categories.map((c) => [c.id, c])).values()
+        );
+
+        const { review, user, ...rest } = p;
+        return {
+            ...rest,
+            avgRating,
+            serviceCategories: uniqueCategories,
+        };
     });
 
     const totalCount = await prisma.provider.count({
@@ -400,11 +514,116 @@ const getOnlineProvidersForWeb = asyncHandler(async (req, res) => {
     });
 });
 
+// ##########----------Create Provider (with User, Skills & Services)----------##########
+const createProvider = asyncHandler(async (req, res) => {
+    const {
+        name,
+        email,
+        mobile,
+        gender,
+        proficiency,
+        skillVerification,
+        language,
+        dob,
+        address,
+        countryId,
+        stateId,
+        pincode,
+        skills = [],
+        services = []
+    } = req.body;
+
+    let parsedSkills = [];
+    if (skills) {
+        try {
+            parsedSkills = Array.isArray(skills) ? skills : JSON.parse(skills);
+        } catch (err) {
+            parsedSkills = [skills];
+        }
+    }
+
+    let parsedServices = [];
+    if (services) {
+        try {
+            parsedServices = Array.isArray(services) ? services : JSON.parse(services);
+        } catch (err) {
+            parsedServices = [];
+        }
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+        const newUser = await tx.customUser.create({
+            data: {
+                name,
+                email,
+                mobile,
+                userType: "Provider",
+            },
+        });
+
+        const newProvider = await tx.provider.create({
+            data: {
+                userId: newUser.id,
+                name,
+                email,
+                mobile,
+                gender,
+                proficiency,
+                skillVerification,
+                language,
+                dob: dob ? new Date(dob) : null,
+                address,
+                countryId,
+                stateId,
+                pincode,
+                isExistingUser: true,
+                isOnline: true
+            },
+        });
+
+        if (parsedSkills.length > 0) {
+            const skillData = parsedSkills.map((skillId) => ({
+                providerId: newProvider.id,
+                skillId,
+            }));
+
+            await tx.providerSkill.createMany({
+                data: skillData,
+                skipDuplicates: true,
+            });
+        }
+
+        if (parsedServices.length > 0) {
+            const serviceData = parsedServices.map((svc) => ({
+                providerId: newUser.id,
+                serviceId: svc.serviceId,
+                pricePerDay: parseFloat(svc.pricePerDay) || 0,
+            }));
+
+            await tx.providerService.createMany({
+                data: serviceData,
+                skipDuplicates: true,
+            });
+        }
+
+        return tx.provider.findFirst({
+            where: { id: newProvider.id },
+            include: {
+                user: true,
+                providerSkill: { include: { skill: true } },
+            },
+        });
+    });
+
+    res.respond(201, "Provider created successfully", result);
+});
+
 module.exports = {
     completeProviderProfile,
     toggleProviderOnlineStatus,
     getProviderProfile,
     getProviderProfileById,
     getOnlineProviders,
-    getOnlineProvidersForWeb
+    getOnlineProvidersForWeb,
+    createProvider
 }

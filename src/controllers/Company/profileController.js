@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 // ##########----------Complete Company Profile----------##########
 const completeCompanyProfile = asyncHandler(async (req, res) => {
     const userId = req.user;
-    const { companyName, email, mobile, address, countryId, stateId, pincode } = req.body;
+    const { companyName, email, mobile, address, countryId, stateId, pincode, gst } = req.body;
 
     let user = await prisma.customUser.findFirst({
         where: { id: userId },
@@ -25,6 +25,7 @@ const completeCompanyProfile = asyncHandler(async (req, res) => {
             countryId,
             stateId,
             pincode,
+            gst,
             isExistingUser: true
         },
     });
@@ -68,6 +69,8 @@ const getCompanyProfile = asyncHandler(async (req, res) => {
             email: true,
             address: true,
             pincode: true,
+            gst: true,
+            isOnline: true,
             createdAt: true,
             updatedAt: true,
         },
@@ -92,8 +95,10 @@ const getCompanyProfileByID = asyncHandler(async (req, res) => {
             email: true,
             address: true,
             pincode: true,
+            gst: true,
             createdAt: true,
             updatedAt: true,
+            isOnline: true,
         },
     });
 
@@ -107,7 +112,7 @@ const getCompanyProfileByID = asyncHandler(async (req, res) => {
 // ##########----------Get Online Companies (For Customer)----------##########
 const getOnlineCompanies = asyncHandler(async (req, res) => {
     const userId = req.user;
-    const { search = "", page = 1, limit = 10, serviceCategoryId } = req.query;
+    const { search = "", page = 1, limit = 10, serviceCategoryId, serviceId } = req.query;
 
     const customer = await prisma.customer.findFirst({
         where: { userId, isDeleted: false },
@@ -128,23 +133,39 @@ const getOnlineCompanies = asyncHandler(async (req, res) => {
                 { pincode: { contains: search, mode: "insensitive" } },
             ]
             : undefined,
-        ...(serviceCategoryId
-            ? {
-                user: {
-                    companyService: {
-                        some: {
-                            service: {
-                                categoryId: serviceCategoryId,
-                                isDeleted: false,
-                            },
-                        },
-                    },
-                }
-            }
-            : {}),
+        AND: [],
     };
 
-    const companies = await prisma.company.findMany({
+    if (serviceCategoryId) {
+        whereCondition.AND.push({
+            user: {
+                companyService: {
+                    some: {
+                        isDeleted: false,
+                        service: {
+                            categoryId: serviceCategoryId,
+                            isDeleted: false,
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    if (serviceId) {
+        whereCondition.AND.push({
+            user: {
+                companyService: {
+                    some: {
+                        isDeleted: false,
+                        serviceId: serviceId,
+                    },
+                },
+            },
+        });
+    }
+
+    const companiesRaw = await prisma.company.findMany({
         where: whereCondition,
         select: {
             id: true,
@@ -153,9 +174,50 @@ const getOnlineCompanies = asyncHandler(async (req, res) => {
             mobile: true,
             address: true,
             pincode: true,
+            gst: true,
+            isOnline: true,
+            review: {
+                select: { rating: true },
+            },
+            user: {
+                select: {
+                    companyService: {
+                        where: { isDeleted: false },
+                        select: {
+                            service: {
+                                select: {
+                                    category: {
+                                        select: { id: true, name: true },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
         },
         skip,
         take: Number(limit),
+    });
+
+    const companies = companiesRaw.map(company => {
+        const ratings = company.review.map(r => r.rating);
+        const avgRating =
+            ratings.length > 0
+                ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+                : 0;
+
+        const categories =
+            company.user?.companyService
+                ?.map((cs) => cs.service?.category)
+                .filter((c) => c) || [];
+
+        const uniqueCategories = Array.from(
+            new Map(categories.map((c) => [c.id, c])).values()
+        );
+
+        const { review, user, ...rest } = company;
+        return { ...rest, avgRating: Number(avgRating.toFixed(1)), serviceCategories: uniqueCategories };
     });
 
     const totalCount = await prisma.company.count({
@@ -175,7 +237,7 @@ const getOnlineCompanies = asyncHandler(async (req, res) => {
 
 // ##########----------Get Online Companies For Web----------##########
 const getOnlineCompaniesForWeb = asyncHandler(async (req, res) => {
-    const { search = "", page = 1, limit = 10, serviceCategoryId } = req.query;
+    const { search = "", page = 1, limit = 10, serviceCategoryId, serviceId } = req.query;
 
     const skip = (Number(page) - 1) * Number(limit);
 
@@ -189,23 +251,39 @@ const getOnlineCompaniesForWeb = asyncHandler(async (req, res) => {
                 { pincode: { contains: search, mode: "insensitive" } },
             ]
             : undefined,
-        ...(serviceCategoryId
-            ? {
-                user: {
-                    companyService: {
-                        some: {
-                            service: {
-                                categoryId: serviceCategoryId,
-                                isDeleted: false,
-                            },
-                        },
-                    },
-                }
-            }
-            : {}),
+        AND: [],
     };
 
-    const companies = await prisma.company.findMany({
+    if (serviceCategoryId) {
+        whereCondition.AND.push({
+            user: {
+                companyService: {
+                    some: {
+                        isDeleted: false,
+                        service: {
+                            categoryId: serviceCategoryId,
+                            isDeleted: false,
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    if (serviceId) {
+        whereCondition.AND.push({
+            user: {
+                companyService: {
+                    some: {
+                        isDeleted: false,
+                        serviceId: serviceId,
+                    },
+                },
+            },
+        });
+    }
+
+    const companiesRaw = await prisma.company.findMany({
         where: whereCondition,
         select: {
             id: true,
@@ -214,9 +292,50 @@ const getOnlineCompaniesForWeb = asyncHandler(async (req, res) => {
             mobile: true,
             address: true,
             pincode: true,
+            gst: true,
+            isOnline: true,
+            review: {
+                select: { rating: true },
+            },
+            user: {
+                select: {
+                    companyService: {
+                        where: { isDeleted: false },
+                        select: {
+                            service: {
+                                select: {
+                                    category: {
+                                        select: { id: true, name: true },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
         },
         skip,
         take: Number(limit),
+    });
+
+    const companies = companiesRaw.map(company => {
+        const ratings = company.review.map(r => r.rating);
+        const avgRating =
+            ratings.length > 0
+                ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+                : 0;
+
+        const categories =
+            company.user?.companyService
+                ?.map((cs) => cs.service?.category)
+                .filter((c) => c) || [];
+
+        const uniqueCategories = Array.from(
+            new Map(categories.map((c) => [c.id, c])).values()
+        );
+
+        const { review, user, ...rest } = company;
+        return { ...rest, avgRating: Number(avgRating.toFixed(1)), serviceCategories: uniqueCategories };
     });
 
     const totalCount = await prisma.company.count({

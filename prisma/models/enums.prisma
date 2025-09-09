@@ -26,6 +26,7 @@ enum BookingRequestStatus {
   DECLINED
   CANCELLED
   COMPLETED
+  ONGOING
 }
 
 enum BookingStatus {
@@ -35,4 +36,5 @@ enum BookingStatus {
   ASSIGNED
   CANCELLED
   COMPLETED
+  ONGOING
 }

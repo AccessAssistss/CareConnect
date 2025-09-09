@@ -9,6 +9,8 @@ model BookingRequest {
     endDate        DateTime?
     totalAmount    Float
     status         BookingRequestStatus @default(PENDING)
+    startCode      String?
+    endCode        String?
     createdAt      DateTime             @default(now())
     updatedAt      DateTime             @updatedAt
     isDeleted      Boolean              @default(false)

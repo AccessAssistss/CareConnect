@@ -22,6 +22,7 @@ const createSkill = asyncHandler(async (req, res) => {
 // ##########----------Get All Skills----------##########
 const getAllSkills = asyncHandler(async (req, res) => {
     const skills = await prisma.skill.findMany({
+        where: { isDeleted: false },
         orderBy: { createdAt: "desc" },
     });
     res.respond(200, "Skills fetched successfully", skills);
