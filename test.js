@@ -9,9 +9,8 @@ const CATEGORY_MAP = {
 };
 
 async function main() {
-  // Load Excel file
   const workbook = xlsx.readFile("new service.xlsx");
-  const sheet = workbook.Sheets[workbook.SheetNames[0]]; // Use first sheet
+  const sheet = workbook.Sheets[workbook.SheetNames[0]]; 
   const rows = xlsx.utils.sheet_to_json(sheet);
 
   for (const row of rows) {
@@ -26,7 +25,6 @@ async function main() {
       continue;
     }
 
-    // Insert into Service table (skip duplicates by name + category)
     await prisma.service.upsert({
       where: {
         name_categoryId: {
@@ -34,7 +32,7 @@ async function main() {
           categoryId,
         },
       },
-      update: {}, // Do nothing if exists
+      update: {}, 
       create: {
         name: serviceName.trim(),
         categoryId,
@@ -42,7 +40,7 @@ async function main() {
     });
   }
 
-  console.log("✅ Services seeded successfully!");
+  console.log("Services seeded successfully!");
 }
 
 main()

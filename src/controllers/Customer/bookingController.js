@@ -740,7 +740,7 @@ const getIncomingRequestsForStaff = asyncHandler(async (req, res) => {
             bookings: {
                 some: { staffId: staff.id },
             },
-            status: { in: ["PENDING", "CONFIRMED", "ONGOING"] },
+            status: { in: ["PENDING", "CONFIRMED", "ONGOING", "COMPLETED"] },
         },
         select: {
             id: true,
